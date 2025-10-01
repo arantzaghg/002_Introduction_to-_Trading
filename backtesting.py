@@ -2,6 +2,8 @@ import pandas as pd
 from models import Operation
 from indicators import rsi, ema, stochastic_oscillator
 from utils import get_portfolio_value
+from utils import get_portfolio_value
+from performance_metrics import calmar_ratio
 
 def backtest(data, trail) -> float:
     data = data.copy()
@@ -41,13 +43,13 @@ def backtest(data, trail) -> float:
 
         for position in active_long_positions.copy():
             if row.Close >= position.take_profit or row.Close <= position.stop_loss:
-                cash += row.Close * position.n_shares * (1 - COM)
+                val += row.Close * position.n_shares * (1 - COM)
                 active_long_positions.remove(position)
 
         for position in active_short_positions.copy():
             if row.Close <= position.take_profit or row.Close >= position.stop_loss:
-                profit_losses = (short_position.price - current_price) * short_position.n_shares *(1-COM)
-                val += (short_position.n_shares * short_position.n_shares * (1 + COM)) + profit_losses
+                profit_losses = (position.price - row.Close) * position.n_shares *(1-COM)
+                val += (position.n_shares * position.n_shares * (1 + COM)) + profit_losses
                 active_short_positions.remove(position)
 
         if row.buy_signal:
@@ -97,3 +99,4 @@ def backtest(data, trail) -> float:
     calmar_val = calmar_ratio(calmar_df['Portfolio Value']) 
 
     return calmar_val
+
