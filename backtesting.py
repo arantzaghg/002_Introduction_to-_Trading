@@ -5,6 +5,7 @@ from utils import get_portfolio_value
 from utils import get_portfolio_value
 from performance_metrics import calmar_ratio
 
+
 def backtest(data, trail) -> float:
     data = data.copy()
 
@@ -48,8 +49,8 @@ def backtest(data, trail) -> float:
 
         for position in active_short_positions.copy():
             if row.Close <= position.take_profit or row.Close >= position.stop_loss:
-                profit_losses = (position.price - row.Close) * position.n_shares *(1-COM)
-                val += (position.n_shares * position.n_shares * (1 + COM)) + profit_losses
+                profit_loss = (position.price - row.Close) * position.n_shares *(1-COM)
+                val += (position.n_shares * position.n_shares * (1 + COM)) + profit_loss
                 active_short_positions.remove(position)
 
         if row.buy_signal:
@@ -84,19 +85,106 @@ def backtest(data, trail) -> float:
     
 
     for position in active_long_positions:
-        profit_losses = (row.Close - position.price) * position.n_shares * (1 - COM)
+        profit_loss = (row.Close - position.price) * position.n_shares * (1 - COM)
         cash += position.n_shares * row.Close * (1 - COM)
 
     for position in active_short_positions:
-        profit_losses = (position.price - row.Close) * position.n_shares * (1 - COM)
-        cash += (position.n_shares * position.price * (1 - COM)) + profit_losses
+        profit_loss = (position.price - row.Close) * position.n_shares * (1 - COM)
+        cash += (position.n_shares * position.price * (1 - COM)) + profit_loss
 
     active_long_positions = []
     active_short_positions = []
-    portfolio_values.append(cash)
 
     calmar_df = pd.DataFrame(portfolio_values, columns=['Portfolio Value'])
     calmar_val = calmar_ratio(calmar_df['Portfolio Value']) 
 
     return calmar_val
+
+
+
+def backtest_with_params(data: pd.DataFrame, params) -> float:
+    data = data.copy()
+
+    rsi_window = params['rsi_window']
+    rsi_lower = params['rsi_lower']
+    rsi_upper = params['rsi_upper']
+    rsi_buy, rsi_sell = rsi(data, rsi_window, rsi_lower, rsi_upper)
+
+    short_window = params['short_window']
+    long_window = params['long_window']
+    ema_buy, ema_sell = ema(data, short_window, long_window)
+
+    k_window = params['k_window']
+    d_window = params['d_window']
+    stoch_buy, stoch_sell = stochastic_oscillator(data, k_window, d_window)
+
+    SL = params['stop_loss']
+    TP = params['take_profit']
+    n_shares = params['n_shares']
+
+    historic = data.dropna()
+    historic['buy_signal'] = (rsi_buy.astype(int) + ema_buy.astype(int) + stoch_buy.astype(int)) >= 2
+    historic['sell_signal'] = (rsi_sell.astype(int) + ema_sell.astype(int) + stoch_sell.astype(int)) >= 2  
+
+    COM = 0.125 / 100 
+    cash = 1_000_000
+
+    active_long_positions: list[Operation] = []
+    active_short_positions: list[Operation] = []
+    portfolio_values = []
+
+    for i, row in historic.iterrows():  
+        for position in active_long_positions.copy():
+            if row.Close >= position.take_profit or row.Close <= position.stop_loss:
+                profit_loss = (row.Close - position.price) * position.n_shares * (1 - COM)
+                cash += row.Close * position.n_shares * (1 - COM)
+                active_long_positions.remove(position)
+
+        for position in active_short_positions.copy():
+            if row.Close <= position.take_profit or row.Close >= position.stop_loss:
+                profit_loss = (position.price - row.Close) * position.n_shares * (1 - COM)
+                cash += (position.n_shares * position.price * (1 - COM)) + profit_loss
+                active_short_positions.remove(position)
+
+        if row.buy_signal:
+            if cash >= row.Close * n_shares * (1 + COM):
+                cash -= row.Close * n_shares * (1 + COM)
+                active_long_positions.append(
+                    Operation(
+                        time=row.Datetime,
+                        price=row.Close,
+                        stop_loss=row.Close * (1 - SL),
+                        take_profit=row.Close * (1 + TP),
+                        n_shares=n_shares,
+                        type='LONG'
+                    )
+                )
+
+        if row.sell_signal:
+            if cash >= row.Close * n_shares * (1 + COM):
+                cash -= row.Close * n_shares * (1 + COM)
+                active_short_positions.append(
+                    Operation(
+                        time=row.Datetime,
+                        price=row.Close,
+                        stop_loss=row.Close * (1 + SL),
+                        take_profit=row.Close * (1 - TP),
+                        n_shares=n_shares,
+                        type='SHORT'
+                    )
+                )
+
+        portfolio_values.append(get_portfolio_value(cash, active_long_positions, active_short_positions, row.Close, n_shares, COM))
+    
+    for position in active_long_positions:
+        cash += position.n_shares * row.Close * (1 - COM)
+
+    for position in active_short_positions:
+        profit_loss = (position.price - row.Close) * position.n_shares * (1 - COM)
+        cash += (position.n_shares * position.price * (1 - COM)) + profit_loss
+
+    active_long_positions = []
+    active_short_positions = [] 
+
+    return cash, portfolio_values
 
