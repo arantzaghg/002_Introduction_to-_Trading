@@ -2,26 +2,25 @@ import pandas as pd
 from models import Operation
 from indicators import rsi, ema, stochastic_oscillator
 from utils import get_portfolio_value
-from utils import get_portfolio_value
 from performance_metrics import calmar_ratio
 
 
-def backtest(data, trail) -> float:
+def backtest(data, trial) -> float:
     data = data.copy()
 
-    rsi_window = trail.suggest_int('rsi_window', 5, 50)
-    rsi_lower = trail.suggest_int('rsi_lower', 5, 35)
-    rsi_upper = trail.suggest_int('rsi_upper', 65, 95)
+    rsi_window = trial.suggest_int('rsi_window', 5, 50)
+    rsi_lower = trial.suggest_int('rsi_lower', 5, 35)
+    rsi_upper = trial.suggest_int('rsi_upper', 65, 95)
 
-    short_window = trail.suggest_int('short_window', 5, 20)
-    long_window = trail.suggest_int('long_window', 30, 100)
+    short_window = trial.suggest_int('short_window', 5, 20)
+    long_window = trial.suggest_int('long_window', 30, 100)
 
-    k_window = trail.suggest_int('k_window', 5, 20)
-    d_window = trail.suggest_int('d_window', 3, 10)
+    k_window = trial.suggest_int('k_window', 5, 20)
+    d_window = trial.suggest_int('d_window', 3, 10)
 
-    stop_loss = trail.suggest_float('stop_loss', 0.01, 0.15)
-    take_profit = trail.suggest_float('take_profit', 0.01, 0.15)
-    n_shares = trail.suggest_int('n_shares', 50, 500)
+    stop_loss = trial.suggest_float('stop_loss', 0.01, 0.15)
+    take_profit = trial.suggest_float('take_profit', 0.01, 0.15)
+    n_shares = trial.suggest_int('n_shares', 50, 500)
 
     rsi_buy, rsi_sell = rsi(data, rsi_window, rsi_lower, rsi_upper)
     ema_buy, ema_sell = ema(data, short_window, long_window)
@@ -44,13 +43,13 @@ def backtest(data, trail) -> float:
 
         for position in active_long_positions.copy():
             if row.Close >= position.take_profit or row.Close <= position.stop_loss:
-                val += row.Close * position.n_shares * (1 - COM)
+                cash += row.Close * position.n_shares * (1 - COM)
                 active_long_positions.remove(position)
 
         for position in active_short_positions.copy():
             if row.Close <= position.take_profit or row.Close >= position.stop_loss:
                 profit_loss = (position.price - row.Close) * position.n_shares *(1-COM)
-                val += (position.n_shares * position.n_shares * (1 + COM)) + profit_loss
+                cash += (position.n_shares * position.n_shares * (1 + COM)) + profit_loss
                 active_short_positions.remove(position)
 
         if row.buy_signal:

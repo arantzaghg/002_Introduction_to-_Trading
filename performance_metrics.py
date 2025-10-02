@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 
-def sharpe_ratio(data: pd.DataFrame) -> float:
-    returns = data['Close'].pct_change().dropna()
+def sharpe_ratio(portfolio_value: pd.Series) -> float:
+    returns = portfolio_value.pct_change().dropna()
     mean_return = returns.mean()
     std_return = returns.std()
         
@@ -11,8 +11,8 @@ def sharpe_ratio(data: pd.DataFrame) -> float:
     
     return annual_return / annual_std if annual_std > 0 else 0
 
-def sortino_ratio(data: pd.DataFrame) -> float:
-    returns = data['Close'].pct_change().dropna()
+def sortino_ratio(portfolio_value: pd.Series) -> float:
+    returns = portfolio_value.pct_change().dropna()
     mean_return = returns.mean()
     downside_dev = returns[returns < 0].std()
 
@@ -22,20 +22,20 @@ def sortino_ratio(data: pd.DataFrame) -> float:
     return annual_return / annual_downside_dev if annual_downside_dev > 0 else 0
     
 
-def maximum_drawdown(data: pd.DataFrame) -> float:
-    rolling_max = data['Close'].cummax()
-    drawdown = (rolling_max - data['Close']) / rolling_max
-    max_drawdown = drawdown.max()
+def maximum_drawdown(portfolio_value: pd.Series) -> float:
+    rolling_max = portfolio_value.cummax()
+    drawdown = (portfolio_value - rolling_max) / rolling_max
+    max_drawdown = abs(drawdown.min())
 
     return max_drawdown
     
 
-def calmar_ratio(data: pd.DataFrame) -> float:
-    returns = data['Close'].pct_change().dropna()
+def calmar_ratio(portfolio_value: pd.Series) -> float:
+    returns = portfolio_value.pct_change().dropna()
     mean_return = returns.mean()
     annual_return = mean_return * (365 * 24)  
 
-    max_drawdown = maximum_drawdown(data)
+    max_drawdown = maximum_drawdown(portfolio_value)
     
     return annual_return / max_drawdown if max_drawdown > 0 else 0
 
