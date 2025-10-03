@@ -1,17 +1,15 @@
 from models import Operation
 import pandas as pd
 
-def get_portfolio_value(cash: float, long_ops: list[Operation], short_ops: list[Operation], current_price: float, n_shares: int, COM: float) -> float:
-    val = cash
-
+def get_portfolio_value(cash: float, long_ops: list[Operation], short_ops: list[Operation], current_price: float, n_shares: float) -> float:
+    portfolio_value = cash 
     for position in long_ops:
-        val += current_price * position.n_shares * (1 - COM)
+        portfolio_value += position.n_shares * current_price
 
     for position in short_ops:
-        profit_losses = (position.price - current_price) * position.n_shares *(1-COM)
-        val += (position.n_shares * position.n_shares * (1 + COM)) + profit_losses
-
-    return val
+        profit_loss = ((position.price - current_price) * position.n_shares)
+        portfolio_value += (position.n_shares * position.price) + profit_loss
+    return portfolio_value
 
 def split_fun(data: pd.DataFrame):
     train_size = int(len(data) * 0.6)
