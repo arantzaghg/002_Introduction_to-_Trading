@@ -5,11 +5,10 @@ from performance_metrics import calmar_ratio
 from get_signals import get_signal
 import numpy as np
 
-def backtestings(data, SL, TP, n_shares) -> pd.Series:
+def backtestings(data, SL, TP, n_shares, cash) -> pd.Series:
     data = data.copy()
 
     COM = 0.125 / 100 
-    cash = 1_000_000
     SL = SL
     TP = TP
     n_shares = n_shares
@@ -84,7 +83,7 @@ def backtestings(data, SL, TP, n_shares) -> pd.Series:
     active_long_positions = []
     active_short_positions = [] 
 
-    return pd.Series(portfolio_hist), win_rate
+    return pd.Series(portfolio_hist), win_rate, cash
 
 
 def optimize(trial, train_data) -> float:
@@ -114,7 +113,7 @@ def optimize(trial, train_data) -> float:
         start = i * size
         end = (i + 1) * size
         split_data = data.iloc[start:end,:]
-        portfolio_values, win_rate = backtestings(split_data, params['stop_loss'], params['take_profit'], params['n_shares'])
+        portfolio_values, win_rate, cash = backtestings(split_data, params['stop_loss'], params['take_profit'], params['n_shares'], cash=1_000_000)
 
         calmar = calmar_ratio(portfolio_values)
         calmar_ratios.append(calmar)

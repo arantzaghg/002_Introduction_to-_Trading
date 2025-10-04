@@ -1,9 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-## CAMBIAR 
-
-
+## CAMBIAR MAYBE
 
 def port_val(portfolio_values):
     plt.figure(figsize=(10, 5))
