@@ -39,14 +39,6 @@ def calmar_ratio(portfolio_hist) -> float:
     
     return annual_return / max_drawdown if max_drawdown > 0 else 0
 
-def win_rate(trades: list) -> float:
-    if not trades:
-        return 0
-    
-    wins = sum(1 for trade in trades if trade['profit'] > 0)
-
-    return wins / len(trades)
-
 def all_metrics(portfolio_value) -> pd.DataFrame:
     metrics = pd.DataFrame({
         'Sharpe Ratio': sharpe_ratio(portfolio_value),

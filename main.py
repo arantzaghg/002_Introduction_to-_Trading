@@ -33,7 +33,7 @@ def main():
     portfolio_value_validation = backtestings(validation_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
 
     shift = portfolio_value_test.iloc[-1] - portfolio_value_validation.iloc[0]
-    portfolio_value_validation = portfolio_value_validation + shift
+    portfolio_value_validation, win_rate = portfolio_value_validation + shift
 
     combined = pd.concat([test_data, validation_data]).reset_index(drop=True)
     test_val_portfolio = portfolio_value_test + portfolio_value_validation   
@@ -48,6 +48,8 @@ def main():
     print("Performance Metrics:")
     metrics = all_metrics(test_val_portfolio)
     print(metrics)
+
+    print(f"Win Rate: {win_rate:.2%}")
     
 
 

@@ -17,17 +17,21 @@ def backtestings(data, SL, TP, n_shares) -> pd.Series:
     active_long_positions: list[Operation] = []
     active_short_positions: list[Operation] = []
     portfolio_hist = [cash]
+    trades = []
 
     for i, row in data.iterrows():  
 
         for position in active_long_positions.copy():
             if row.Close > position.take_profit or row.Close < position.stop_loss:
+                profit_loss = (row.Close - position.price) * position.n_shares * (1 - COM)
+                trades.append(profit_loss)
                 cash += row.Close * position.n_shares * (1 - COM)
                 active_long_positions.remove(position)
 
         for position in active_short_positions.copy():
             if row.Close < position.take_profit or row.Close > position.stop_loss:
                 profit_loss = (position.price - row.Close) * position.n_shares * (1 - COM)
+                trades.append(profit_loss)
                 cash += (position.n_shares * position.price) + profit_loss
                 active_short_positions.remove(position)
 
@@ -71,10 +75,16 @@ def backtestings(data, SL, TP, n_shares) -> pd.Series:
         profit_loss = (position.price - row.Close) * position.n_shares * (1 - COM)
         cash += (position.n_shares * position.price) + profit_loss
 
+    if trades:
+        win = sum(1 for trade in trades if trade > 0)
+        win_rate = win / len(trades)
+    else:
+        win_rate = 0
+
     active_long_positions = []
     active_short_positions = [] 
 
-    return pd.Series(portfolio_hist)
+    return pd.Series(portfolio_hist), win_rate
 
 
 def optimize(trial, train_data) -> float:
@@ -104,7 +114,7 @@ def optimize(trial, train_data) -> float:
         start = i * size
         end = (i + 1) * size
         split_data = data.iloc[start:end,:]
-        portfolio_values = backtestings(split_data, params['stop_loss'], params['take_profit'], params['n_shares'])
+        portfolio_values, win_rate = backtestings(split_data, params['stop_loss'], params['take_profit'], params['n_shares'])
 
         calmar = calmar_ratio(portfolio_values)
         calmar_ratios.append(calmar)
