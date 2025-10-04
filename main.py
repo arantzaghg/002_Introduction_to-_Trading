@@ -24,16 +24,16 @@ def main():
     print("Best Value:", study.best_value)
 
     train_data = get_signal(train.copy(), study.best_params)
-    portfolio_value_train = backtestings(train_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
+    portfolio_value_train, win_rate = backtestings(train_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
 
     test_data = get_signal(test.copy(), study.best_params)
-    portfolio_value_test = backtestings(test_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
+    portfolio_value_test, win_rate = backtestings(test_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
 
     validation_data = get_signal(validation.copy(), study.best_params)
-    portfolio_value_validation = backtestings(validation_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
+    portfolio_value_validation, win_rate = backtestings(validation_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
 
     shift = portfolio_value_test.iloc[-1] - portfolio_value_validation.iloc[0]
-    portfolio_value_validation, win_rate = portfolio_value_validation + shift
+    portfolio_value_validation = portfolio_value_validation + shift
 
     combined = pd.concat([test_data, validation_data]).reset_index(drop=True)
     test_val_portfolio = portfolio_value_test + portfolio_value_validation   
