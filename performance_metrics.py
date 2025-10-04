@@ -48,11 +48,11 @@ def win_rate(trades: list) -> float:
     return wins / len(trades)
 
 def all_metrics(portfolio_value) -> pd.DataFrame:
-    metrics = {
+    metrics = pd.DataFrame({
         'Sharpe Ratio': sharpe_ratio(portfolio_value),
         'Sortino Ratio': sortino_ratio(portfolio_value),
         'Maximum Drawdown': maximum_drawdown(portfolio_value),
         'Calmar Ratio': calmar_ratio(portfolio_value)
-    }
+    }, index=['Metrics'])
     
-    return pd.DataFrame([metrics])
+    return metrics

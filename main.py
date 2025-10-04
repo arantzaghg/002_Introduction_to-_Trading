@@ -12,25 +12,47 @@ def main():
     data = data.rename(columns={'Date': 'Datetime'})
     data['Datetime'] = pd.to_datetime(data['Datetime'], format = 'mixed', dayfirst=True)
     data = data.iloc[::-1].reset_index(drop=True)
-    print(data.head())
+
 
     train, test, validation = split_fun(data)
     
     study = optuna.create_study(direction='maximize')
-    study.optimize(lambda trial: optimize(trial, train), n_trials=10, n_jobs=-1)
+    study.optimize(lambda trial: optimize(trial, train), n_trials=20, n_jobs=-1)
 
     train = get_signal(train.copy(), study.best_params)
-    portfolio_val = backtestings(train, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
-    print(portfolio_val)
+    portfolio_val_train = backtestings(train, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
+    portfolio_val_test = backtestings(train, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
 
-    plt.plot(portfolio_val)
-    plt.title('Portfolio Value Over Time')
-    plt.xlabel('Time')
-    plt.ylabel('Portfolio Value')
-    plt.show()
+    portfolio_val_validation = backtestings(train, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
+
+    test_validation = pd.concat([test, validation]).reset_index(drop=True)
+    total_portfolio = portfolio_val_test + portfolio_val_validation
+
     
-    all_met = all_metrics(portfolio_val)
-    print(all_met)
+
+
+    test_df = pd.DataFrame({
+        'Date': test['Datetime'].reset_index(drop=True),
+        'Portfolio Value': portfolio_val_test
+    })
+
+    validation_df = pd.DataFrame({
+        'Date': validation['Datetime'].reset_index(drop=True),
+        'Portfolio Value': portfolio_val_validation
+    })
+    
+    plt.figure(figsize=(12, 6))
+    plt.plot(test_df['Date'], test_df['Portfolio Value'], label='Test', color='red')
+    plt.plot(validation_df['Date'], validation_df['Portfolio Value'], label='Validation', color='green')
+    plt.title('Portfolio value over time (test + validation)')
+    plt.xlabel('Date')
+    plt.ylabel('Portfolio value')
+    plt.legend()
+    plt.show()
+
+
+
+
 
 # 3 comillas codigos
     
