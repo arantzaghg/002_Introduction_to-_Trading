@@ -82,10 +82,10 @@ def optimize(trial, train_data) -> float:
 
     params = {
         'rsi_window': trial.suggest_int('rsi_window', 5, 60),
-        'rsi_lower':  trial.suggest_int('rsi_lower', 5, 30),
-        'rsi_upper': trial.suggest_int('rsi_upper', 60, 95),
-        'short_window': trial.suggest_int('short_window', 5, 20),
-        'long_window': trial.suggest_int('long_window', 30, 100),
+        'rsi_lower':  trial.suggest_int('rsi_lower', 5, 20),
+        'rsi_upper': trial.suggest_int('rsi_upper', 60, 80),
+        'short_window': trial.suggest_int('short_window', 5, 40),
+        'long_window': trial.suggest_int('long_window', 30, 90),
         'k_window': trial.suggest_int('k_window', 5, 20),
         'd_window': trial.suggest_int('d_window', 3, 15),
         'stop_loss': trial.suggest_float('stop_loss', 0.01, 0.05),

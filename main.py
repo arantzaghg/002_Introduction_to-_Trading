@@ -2,60 +2,54 @@ import pandas as pd
 from utils import split_fun
 import optuna
 from backtesting import backtestings, optimize
-import matplotlib.pyplot as plt
 from get_signals import get_signal
 from performance_metrics import all_metrics
+from plots import port_val, test_val
+from tables import create_table
+
 
 
 def main():
     data = pd.read_csv('Binance_BTCUSDT_1h.csv', skiprows=1).dropna()
     data = data.rename(columns={'Date': 'Datetime'})
-    data['Datetime'] = pd.to_datetime(data['Datetime'], format = 'mixed', dayfirst=True)
+    data['Datetime'] = pd.to_datetime(data['Datetime'], format='mixed', dayfirst=True)
     data = data.iloc[::-1].reset_index(drop=True)
 
-
     train, test, validation = split_fun(data)
-    
+
     study = optuna.create_study(direction='maximize')
-    study.optimize(lambda trial: optimize(trial, train), n_trials=20, n_jobs=-1)
+    study.optimize(lambda trial: optimize(trial, train), n_trials=10)
 
-    train = get_signal(train.copy(), study.best_params)
-    portfolio_val_train = backtestings(train, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
-    portfolio_val_test = backtestings(train, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
+    print("Best parameters:", study.best_params)
+    print("Best Value:", study.best_value)
 
-    portfolio_val_validation = backtestings(train, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
+    train_data = get_signal(train.copy(), study.best_params)
+    portfolio_value_train = backtestings(train_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
 
-    test_validation = pd.concat([test, validation]).reset_index(drop=True)
-    total_portfolio = portfolio_val_test + portfolio_val_validation
+    test_data = get_signal(test.copy(), study.best_params)
+    portfolio_value_test = backtestings(test_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
 
+    validation_data = get_signal(validation.copy(), study.best_params)
+    portfolio_value_validation = backtestings(validation_data, study.best_params['stop_loss'], study.best_params['take_profit'], study.best_params['n_shares'])
+
+    shift = portfolio_value_test.iloc[-1] - portfolio_value_validation.iloc[0]
+    portfolio_value_validation = portfolio_value_validation + shift
+
+    combined = pd.concat([test_data, validation_data]).reset_index(drop=True)
+    test_val_portfolio = portfolio_value_test + portfolio_value_validation   
+
+    port_val(portfolio_value_train)
+    test_val(portfolio_value_test, portfolio_value_validation, test[['Datetime']], validation[['Datetime']])
+
+    print("Tables:")
+    returns_table = create_table(data.set_index('Datetime'))
+    print(returns_table)
+
+    print("Performance Metrics:")
+    metrics = all_metrics(test_val_portfolio)
+    print(metrics)
     
 
 
-    test_df = pd.DataFrame({
-        'Date': test['Datetime'].reset_index(drop=True),
-        'Portfolio Value': portfolio_val_test
-    })
-
-    validation_df = pd.DataFrame({
-        'Date': validation['Datetime'].reset_index(drop=True),
-        'Portfolio Value': portfolio_val_validation
-    })
-    
-    plt.figure(figsize=(12, 6))
-    plt.plot(test_df['Date'], test_df['Portfolio Value'], label='Test', color='red')
-    plt.plot(validation_df['Date'], validation_df['Portfolio Value'], label='Validation', color='green')
-    plt.title('Portfolio value over time (test + validation)')
-    plt.xlabel('Date')
-    plt.ylabel('Portfolio value')
-    plt.legend()
-    plt.show()
-
-
-
-
-
-# 3 comillas codigos
-    
-   
 if __name__ == "__main__":
     main()
